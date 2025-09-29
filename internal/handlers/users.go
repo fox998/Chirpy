@@ -13,6 +13,78 @@ import (
 	"github.com/google/uuid"
 )
 
+func UsersUpdate(c *config.ApiConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		bearer, err := auth.GetBearerToken(r.Header)
+		if err != nil {
+			log.Printf("Failed to get bearer token %v\n", err)
+			http.Error(w, "", http.StatusUnauthorized)
+			return
+		}
+
+		userId, err := auth.ValidateJWT(bearer, c.Env.Secret)
+		if err != nil {
+			log.Printf("Failed to validate jwt %v\n", err)
+			http.Error(w, "", http.StatusUnauthorized)
+			return
+		}
+
+		defer r.Body.Close()
+		var bodyJson struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+
+		err = json.NewDecoder(r.Body).Decode(&bodyJson)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to decode request body: %s", err.Error()), 400)
+			return
+		}
+
+		if bodyJson.Email == "" || bodyJson.Password == "" {
+			http.Error(w, "Email and password are required", 400)
+			return
+		}
+
+		password_hash, err := auth.HashPassword(bodyJson.Password)
+		if err != nil {
+			log.Println("failed to create password hash: ", err.Error())
+			http.Error(w, "failed to update user", 500)
+			return
+		}
+
+		dbUpdatedUser, err := c.Db.UpdateUser(r.Context(), database.UpdateUserParams{
+			ID:           userId,
+			Email:        bodyJson.Email,
+			PasswordHash: password_hash,
+		})
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, "failed to update user", 500)
+			return
+		}
+
+		type resBody struct {
+			ID        uuid.UUID `json:"id"`
+			CreatedAt time.Time `json:"created_at"`
+			UpdatedAt time.Time `json:"updated_at"`
+			Email     string    `json:"email"`
+		}
+
+		err = json.NewEncoder(w).Encode(resBody{
+			ID:        dbUpdatedUser.ID,
+			CreatedAt: dbUpdatedUser.CretedAt,
+			UpdatedAt: dbUpdatedUser.UpdatedAt,
+			Email:     dbUpdatedUser.Email,
+		})
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, "failed to construct responce", 500)
+			return
+		}
+	}
+}
+
 func Users(c *config.ApiConfig) http.HandlerFunc {
 	return func(writer http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()

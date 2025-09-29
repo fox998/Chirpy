@@ -20,12 +20,15 @@ func (mux *ChirpyMux) setupHandlers(config *config.ApiConfig) {
 	{
 		// mux.HandleFunc("GET /api/healthz", handlers.Healthz)
 		mux.HandleFunc("POST /api/users", handlers.Users(config))
+		mux.HandleFunc("PUT /api/users", handlers.UsersUpdate(config))
+
 		mux.HandleFunc("POST /api/login", handlers.Login(config))
 		mux.HandleFunc("POST /api/refresh", handlers.Refresh(config))
 		mux.HandleFunc("POST /api/revoke", handlers.Revoke(config))
 
 		mux.HandleFunc("GET /api/chirps", handlers.AllChirps(config))
 		mux.HandleFunc("GET /api/chirps/{id}", handlers.ChirpsById(config))
+		mux.HandleFunc("DELETE /api/chirps/{id}", handlers.DeleteChirps(config))
 		mux.HandleFunc("POST /api/chirps", handlers.Chirps(config))
 	}
 

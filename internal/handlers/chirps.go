@@ -146,3 +146,44 @@ func ChirpsById(config *config.ApiConfig) http.HandlerFunc {
 		json.NewEncoder(w).Encode(chirpsDatabaseToResponce(dbChirp))
 	}
 }
+
+func DeleteChirps(config *config.ApiConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		chirpId, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			http.Error(w, "id path param expected: "+err.Error(), 400)
+			return
+		}
+
+		authUserId, err := ValidateAuth(config, r)
+		if err != nil {
+			log.Printf("Failed to get jwt token %v\n", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		dbChirp, err := config.Db.GetChirpByID(r.Context(), chirpId)
+		if err != nil {
+			log.Println(err)
+			http.NotFound(w, r)
+			return
+		}
+
+		if dbChirp.UserID.UUID != authUserId {
+			http.Error(w, "You can delete only your own chirps", http.StatusForbidden)
+			return
+		}
+
+		err = config.Db.DeleteChirpByID(r.Context(), database.DeleteChirpByIDParams{
+			ID:     chirpId,
+			UserID: dbChirp.UserID,
+		})
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "failed to delete chirp", 500)
+			return
+		}
+
+		w.WriteHeader(204)
+	}
+}
