@@ -5,6 +5,7 @@ import (
 
 	"github.com/fox998/Chirpy/internal/config"
 	"github.com/fox998/Chirpy/internal/handlers"
+	"github.com/fox998/Chirpy/internal/webhooks"
 )
 
 type ChirpyMux struct {
@@ -30,6 +31,8 @@ func (mux *ChirpyMux) setupHandlers(config *config.ApiConfig) {
 		mux.HandleFunc("GET /api/chirps/{id}", handlers.ChirpsById(config))
 		mux.HandleFunc("DELETE /api/chirps/{id}", handlers.DeleteChirps(config))
 		mux.HandleFunc("POST /api/chirps", handlers.Chirps(config))
+
+		mux.HandleFunc("POST /api/polka/webhooks", webhooks.Polka(config))
 	}
 
 	{

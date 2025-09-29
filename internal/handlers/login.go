@@ -8,20 +8,11 @@ import (
 	"time"
 
 	"github.com/fox998/Chirpy/internal/auth"
+	"github.com/fox998/Chirpy/internal/common"
 	"github.com/fox998/Chirpy/internal/config"
 	"github.com/fox998/Chirpy/internal/database"
 	"github.com/google/uuid"
 )
-
-func validateExpireIn(inSec uint) time.Duration {
-	defaultDuration := time.Hour
-	if inSec == 0 || inSec > uint(defaultDuration.Seconds()) {
-		return defaultDuration
-	}
-
-	return time.Second * time.Duration(inSec)
-
-}
 
 func Login(config *config.ApiConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -74,21 +65,21 @@ func Login(config *config.ApiConfig) http.HandlerFunc {
 		}
 
 		type resBody struct {
-			ID           string `json:"id"`
-			CreatedAt    string `json:"created_at"`
-			UpdatedAt    string `json:"updated_at"`
-			Email        string `json:"email"`
+			common.ResponceUserData
 			Token        string `json:"token"`
 			Refreshtoken string `json:"refresh_token"`
 		}
 
 		err = json.NewEncoder(w).Encode(resBody{
-			ID:           dbUser.ID.String(),
-			CreatedAt:    dbUser.CretedAt.Format("2021-07-07T00:00:00Z"),
-			UpdatedAt:    dbUser.UpdatedAt.Format("2021-07-07T00:00:00Z"),
-			Email:        dbUser.Email,
 			Token:        jwt,
 			Refreshtoken: refreshToken.ID.String(),
+			ResponceUserData: common.ResponceUserData{
+				ID:          dbUser.ID,
+				CreatedAt:   dbUser.CretedAt,
+				UpdatedAt:   dbUser.UpdatedAt,
+				Email:       dbUser.Email,
+				IsChirpyRed: dbUser.IsChirpyRed,
+			},
 		})
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to encode: %s", err.Error()), 500)

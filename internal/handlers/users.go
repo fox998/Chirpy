@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/fox998/Chirpy/internal/auth"
+	"github.com/fox998/Chirpy/internal/common"
 	"github.com/fox998/Chirpy/internal/config"
 	"github.com/fox998/Chirpy/internal/database"
-	"github.com/google/uuid"
 )
 
 func UsersUpdate(c *config.ApiConfig) http.HandlerFunc {
@@ -64,18 +63,12 @@ func UsersUpdate(c *config.ApiConfig) http.HandlerFunc {
 			return
 		}
 
-		type resBody struct {
-			ID        uuid.UUID `json:"id"`
-			CreatedAt time.Time `json:"created_at"`
-			UpdatedAt time.Time `json:"updated_at"`
-			Email     string    `json:"email"`
-		}
-
-		err = json.NewEncoder(w).Encode(resBody{
-			ID:        dbUpdatedUser.ID,
-			CreatedAt: dbUpdatedUser.CretedAt,
-			UpdatedAt: dbUpdatedUser.UpdatedAt,
-			Email:     dbUpdatedUser.Email,
+		err = json.NewEncoder(w).Encode(common.ResponceUserData{
+			ID:          dbUpdatedUser.ID,
+			Email:       dbUpdatedUser.Email,
+			IsChirpyRed: dbUpdatedUser.IsChirpyRed,
+			CreatedAt:   dbUpdatedUser.CretedAt,
+			UpdatedAt:   dbUpdatedUser.UpdatedAt,
 		})
 		if err != nil {
 			log.Println(err.Error())
@@ -116,19 +109,13 @@ func Users(c *config.ApiConfig) http.HandlerFunc {
 			return
 		}
 
-		type resBody struct {
-			ID        uuid.UUID `json:"id"`
-			CreatedAt time.Time `json:"created_at"`
-			UpdatedAt time.Time `json:"updated_at"`
-			Email     string    `json:"email"`
-		}
-
 		writer.WriteHeader(201)
-		err = json.NewEncoder(writer).Encode(resBody{
-			ID:        user.ID,
-			CreatedAt: user.CretedAt,
-			UpdatedAt: user.UpdatedAt,
-			Email:     user.Email,
+		err = json.NewEncoder(writer).Encode(common.ResponceUserData{
+			ID:          user.ID,
+			Email:       user.Email,
+			IsChirpyRed: user.IsChirpyRed,
+			CreatedAt:   user.CretedAt,
+			UpdatedAt:   user.UpdatedAt,
 		})
 		if err != nil {
 			http.Error(writer, fmt.Sprintf("failed to encode: %s", err.Error()), 500)
