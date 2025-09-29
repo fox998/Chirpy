@@ -6,9 +6,16 @@ VALUES (
 )
 RETURNING *;
 
--- name: ListChirps :many
+-- name: ListChirpsAll :many
 SELECT * FROM chirps
 ORDER BY created_at;
+
+-- name: ListChirpsByUser :many
+SELECT * FROM chirps
+WHERE user_id = $1::uuid
+ORDER BY created_at;
+
+
 
 -- name: GetChirpByID :one
 SELECT * FROM chirps

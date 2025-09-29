@@ -44,13 +44,48 @@ func (q *Queries) GetChirpByID(ctx context.Context, id uuid.UUID) (Chirp, error)
 	return i, err
 }
 
-const listChirps = `-- name: ListChirps :many
+const listChirpsAll = `-- name: ListChirpsAll :many
 SELECT id, created_at, updated_at, body, user_id FROM chirps
 ORDER BY created_at
 `
 
-func (q *Queries) ListChirps(ctx context.Context) ([]Chirp, error) {
-	rows, err := q.db.QueryContext(ctx, listChirps)
+func (q *Queries) ListChirpsAll(ctx context.Context) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, listChirpsAll)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listChirpsByUser = `-- name: ListChirpsByUser :many
+SELECT id, created_at, updated_at, body, user_id FROM chirps
+WHERE user_id = $1::uuid
+ORDER BY created_at
+`
+
+func (q *Queries) ListChirpsByUser(ctx context.Context, dollar_1 uuid.UUID) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, listChirpsByUser, dollar_1)
 	if err != nil {
 		return nil, err
 	}

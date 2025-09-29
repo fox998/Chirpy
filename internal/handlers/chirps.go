@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/fox998/Chirpy/internal/auth"
@@ -110,9 +111,60 @@ func Chirps(config *config.ApiConfig) http.HandlerFunc {
 
 }
 
+type allChirpsParams struct {
+	AuthorId  *uuid.UUID
+	SortDdesc bool
+}
+
+func getAllChirpsParams(r *http.Request) allChirpsParams {
+
+	params := allChirpsParams{
+		AuthorId:  nil,
+		SortDdesc: false,
+	}
+
+	authorIdStr := r.URL.Query().Get("author_id")
+	if authorIdStr != "" {
+		authorId, err := uuid.Parse(authorIdStr)
+		if err == nil {
+			params.AuthorId = &authorId
+		}
+	}
+
+	isSortDescStr := r.URL.Query().Get("sort")
+	if isSortDescStr == "desc" {
+		params.SortDdesc = true
+	}
+
+	return params
+}
+
+func getDbChirps(r *http.Request, c *config.ApiConfig) (chirps []database.Chirp, err error) {
+	params := getAllChirpsParams(r)
+
+	if params.AuthorId != nil {
+		chirps, err = c.Db.ListChirpsByUser(r.Context(), *params.AuthorId)
+	} else {
+		chirps, err = c.Db.ListChirpsAll(r.Context())
+	}
+
+	if err != nil {
+		return chirps, err
+	}
+
+	if params.SortDdesc {
+		sort.Slice(chirps, func(i, j int) bool {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		})
+	}
+
+	return chirps, nil
+}
+
 func AllChirps(config *config.ApiConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		chirps, err := config.Db.ListChirps(r.Context())
+		// params := getAllChirpsParams(r)
+		chirps, err := getDbChirps(r, config)
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "failed to obtaine chirps", 500)
